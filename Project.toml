@@ -1,0 +1,8 @@
+name = "NetworkEpistemology"
+uuid = "fcbdc98d-c58b-4fa7-a43f-45174aa607a6"
+authors = ["Jack Beasley <jack.beasley@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
