@@ -2,10 +2,10 @@ module Individuals
 
 using Distributions
 
-mutable struct Individual{T <: Distributions.Distribution}
-    id::Int64
-    beliefs::Vector{T}
-end
+#mutable struct Individual{T <: Distributions.Distribution}
+#    id::Int64
+#    beliefs::Vector{T}
+#end
 
 mutable struct BetaIndividual
     id::Int64
@@ -18,7 +18,7 @@ function BetaIndividual(id::Int64,
     initBeliefs = [Distributions.Beta(rand(alphaDist), rand(betaDist)) for _ = 1:numActions]
     return BetaIndividual(id, initBeliefs)
 end
-
+.
 struct TrialResult
     individualID::Int64
     actionID::Int
@@ -61,6 +61,6 @@ function update_with_results(indiv::BetaIndividual, results::Vector{TrialResult}
     end
 end
 
-export BetaIndividual, Individual, TrialResult, TrialCounts, update_with_results, select_action
+export BetaIndividual, TrialResult, TrialCounts, update_with_results, select_action
 
 end
