@@ -34,7 +34,7 @@ end
 const TrialCounts = NamedTuple{(:successes, :trials), Tuple{Integer, Integer}}
 
 # Converts a stream of TrialResults into 
-function group_results_by_action(results::Vector{TrialResult})
+function group_results_by_action(results::Vector{TrialResult})::Dict{Int, TrialCounts}
     function groupResultByAction(dict::Dict{Int, TrialCounts}, result::TrialResult)
         initTuple = TrialCounts((successes=0, trials=0))
         curCounts = get(dict, result.actionID, initTuple)
@@ -49,6 +49,18 @@ function group_results_by_action(results::Vector{TrialResult})
     return reduce(groupResultByAction, results; init = Dict{Int, TrialCounts}([]))
 end
 
-export BetaIndividual, Individual, TrialResult, TrialCounts, group_results_by_action
+function update_with_results(indiv::BetaIndividual, results::Vector{TrialResult})
+    groupedResults = group_results_by_action(results)
+
+    for (actionID, (numSuccesses, numTrials)) in groupedResults
+        existingDist = indiv.beliefs[actionID]
+        indiv.beliefs[actionID] = Beta(
+            params(existingDist)[1] + numSuccesses,
+            params(existingDist)[2] + numTrials - numSuccesses,
+        )
+    end
+end
+
+export BetaIndividual, Individual, TrialResult, TrialCounts, update_with_results, select_action
 
 end
