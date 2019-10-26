@@ -18,7 +18,7 @@ function BetaIndividual(id::Int64,
     initBeliefs = [Distributions.Beta(rand(alphaDist), rand(betaDist)) for _ = 1:numActions]
     return BetaIndividual(id, initBeliefs)
 end
-.
+
 struct TrialResult
     individualID::Int64
     actionID::Int
