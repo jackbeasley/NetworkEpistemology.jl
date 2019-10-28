@@ -9,14 +9,14 @@ using Distributions
 
 mutable struct BetaIndividual
     id::Int64
-    alphas::Vector{Float64}
-    betas::Vector{Float64}
+    beliefs::Vector{Distributions.Beta}
 end
 
 function BetaIndividual(id::Int64,
                         numActions::Int,
                         alphaDist::Distributions.Distribution, betaDist::Distributions.Distribution)
-    return BetaIndividual(id, rand(alphaDist, numActions), rand(betaDist, numActions))
+    initBeliefs = [Distributions.Beta(rand(alphaDist), rand(betaDist)) for _ = 1:numActions]
+    return BetaIndividual(id, initBeliefs)
 end
 
 struct TrialResult
@@ -28,37 +28,37 @@ end
 
 # Returns index (id) of chosen action based on internal belief distributions and decision process
 function select_action(indiv::BetaIndividual)::Int
-
-    return argmax([mean(Beta(alpha, beta)) for (alpha, beta) = zip(indiv.alphas, indiv.betas)])
+    return argmax([mean(belief) for belief = indiv.beliefs])
 end
 
 const TrialCounts = NamedTuple{(:successes, :trials), Tuple{Integer, Integer}}
 
 # Converts a stream of TrialResults into 
-function group_results_by_action(numActions::Int, results::Vector{TrialResult})::Tuple{Vector{Int}, Vector{Int}}
+function group_results_by_action(results::Vector{TrialResult})::Dict{Int, TrialCounts}
+    function groupResultByAction(dict::Dict{Int, TrialCounts}, result::TrialResult)
+        initTuple = TrialCounts((successes=0, trials=0))
+        curCounts = get(dict, result.actionID, initTuple)
 
-    numTrials = zeros(numActions)
-    numSuccesses = zeros(numActions)
-
-    for result in results
-        while size(numTrials)[1] < result.actionID
-            println(size(numTrials)[1])
-            push!(numTrials, 0)
-            push!(numSuccesses, 0)
-        end
-
-        numTrials[result.actionID] += result.numTrials
-        numSuccesses[result.actionID] += result.numSuccesses
+        dict[result.actionID] = TrialCounts((
+            result.numSuccesses + curCounts.successes,
+            result.numTrials + curCounts.trials,
+        ))
+        return dict
     end
 
-    return (numSuccesses, numTrials)
+    return reduce(groupResultByAction, results; init = Dict{Int, TrialCounts}([]))
 end
 
 function update_with_results(indiv::BetaIndividual, results::Vector{TrialResult})
-    (numSuccessesByAction, numTrialsByAction) = group_results_by_action(size(indiv.alphas)[1], results)
+    groupedResults = group_results_by_action(results)
 
-    indiv.alphas = indiv.alphas .+ numSuccessesByAction
-    indiv.betas = indiv.betas .+ numTrialsByAction .- numSuccessesByAction
+    for (actionID, (numSuccesses, numTrials)) in groupedResults
+        existingDist = indiv.beliefs[actionID]
+        indiv.beliefs[actionID] = Beta(
+            params(existingDist)[1] + numSuccesses,
+            params(existingDist)[2] + numTrials - numSuccesses,
+        )
+    end
 end
 
 export BetaIndividual, TrialResult, TrialCounts, update_with_results, select_action

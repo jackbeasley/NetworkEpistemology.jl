@@ -16,9 +16,11 @@ using Test, Distributions
         TrialResult(1, 2, 11, 22),
     ])
 
-    groupedResults = group_results_by_action(1, results1)
+    groupedResults1 = group_results_by_action(results1)
 
-    @test groupedResults == ([10, 12, 23], [20, 24, 34])
+    @test groupedResults1[1] == TrialCounts((10, 20))
+    @test groupedResults1[2] == TrialCounts((12, 24))
+    @test groupedResults1[3] == TrialCounts((23, 34))
 
     results2 = Vector{TrialResult}([
         TrialResult(1, 1, 10, 20),
@@ -26,9 +28,8 @@ using Test, Distributions
         TrialResult(1, 2, 11, 22),
     ])
 
-    indiv = BetaIndividual(1, [1, 1], [2, 2])
+    indiv = BetaIndividual(1, [Beta(1,2), Beta(1,2)])
     update_with_results(indiv, results2)
-    @test indiv.alphas == [11, 13]
-    @test indiv.betas == [12, 14]
+    @test indiv.beliefs == [Beta(11,12), Beta(13,14)]
 end
 end
