@@ -53,7 +53,7 @@ function step_world(w::World)
     (numSuccesses, numTrials) = run_trials(w)
 
     for indiv in w.individuals
-        neighbors = outneighbors(w.structure, indiv.id)
+        neighbors = vcat(outneighbors(w.structure, indiv.id), indiv.id)
         update_with_results(indiv,
         vec(sum(numSuccesses[neighbors, :], dims=1)),
         vec(sum(numTrials[neighbors, :], dims=1)))
