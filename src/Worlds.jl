@@ -16,37 +16,59 @@ mutable struct World
     structure::LightGraphs.AbstractGraph
     individuals::Vector{BetaIndividual}
     actionProbabilities::Vector{Real}
+    actionDistributions::Vector{Distribution}
     trialsPerStep::Integer
 end
-
-
 
 function World(g::LightGraphs.AbstractGraph,
                trialsPerStep::Integer,
                actionPrbs::Vector{Float64},
                alphaDist::Distributions.Distribution, betaDist::Distributions.Distribution)
     individuals = [BetaIndividual(i, size(actionPrbs)[1], alphaDist, betaDist) for i in 1:nv(g)]
-    return World(g, individuals, actionPrbs, trialsPerStep)
+    actionDists = [
+    Binomial(trialsPerStep, actionPrb) for actionPrb in actionPrbs]
+    return World(g, individuals, actionPrbs, actionDists, trialsPerStep)
 end
 
-function run_trials(w::World, indiv::BetaIndividual, numTrials::Number)::TrialResult
-    actionID = select_action(indiv)
+function run_trials(w::World)::Tuple{Matrix{Int64}, Matrix{Int64}}
+    shape = (length(w.individuals), length(w.actionProbabilities))
+    numSuccesses = zeros(Int64, shape)
+    numTrials = zeros(Int64, shape)
 
-    numSuccess = rand(Binomial(numTrials, w.actionProbabilities[actionID]))
+    for indivID in 1:length(w.individuals)
+        actionID = select_action(w.individuals[indivID])
 
-    return TrialResult(indiv.id, actionID, numSuccess, numTrials)
+        numSuccesses[indivID, actionID] = rand(w.actionDistributions[actionID])
+        numTrials[indivID, actionID] = w.trialsPerStep
+    end
+
+    return (numSuccesses, numTrials)
 end
 
 function step_world(w::World)
-    trialResults = [run_trials(w, indiv, w.trialsPerStep) for indiv in w.individuals]
-
+    (numSuccesses, numTrials) = run_trials(w)
 
     for indiv in w.individuals
         neighbors = outneighbors(w.structure, indiv.id)
 
-        neighborResults = filter(res -> res.individualID == indiv.id || res.individualID in neighbors, trialResults)
+        successesByAction = zeros(Int64, length(w.actionProbabilities))
+        trialsByAction = zeros(Int64, length(w.actionProbabilities))
 
-        update_with_results(indiv, neighborResults)
+        for neighborID in neighbors
+            for actionID in 1:length(w.actionProbabilities)
+                successesByAction[actionID] += numSuccesses[neighborID, actionID]
+                trialsByAction[actionID] += numTrials[neighborID, actionID]
+            end
+        end
+
+        for actionID in 1:length(w.actionProbabilities)
+            successesByAction[actionID] += numSuccesses[indiv.id, actionID]
+            trialsByAction[actionID] += numTrials[indiv.id, actionID]
+        end
+
+        #neighborResults = filter(res -> res.individualID in neighbors, trialResults)
+
+        update_with_results(indiv, successesByAction, trialsByAction)
     end
 end
 
