@@ -20,11 +20,4 @@ using Test, Distributions, LightGraphs
 
 end
 
-@testset "Bench" begin
-    world = World(cycle_graph(10), 1000, [0.1, 0.3], Uniform(0, 4), Uniform(0, 4))
-
-    run_trials(world)
-
-end
-
 end

@@ -19,6 +19,8 @@ mutable struct World
     trialsPerStep::Integer
 end
 
+
+
 function World(g::LightGraphs.AbstractGraph,
                trialsPerStep::Integer,
                actionPrbs::Vector{Float64},
@@ -27,36 +29,24 @@ function World(g::LightGraphs.AbstractGraph,
     return World(g, individuals, actionPrbs, trialsPerStep)
 end
 
-#function run_trials(w::World, indiv::BetaIndividual, numTrials::Number)::TrialResult
-#    actionID = select_action(indiv)
-#
-#    numSuccess = rand(Binomial(numTrials, w.actionProbabilities[actionID]))
-#
-#    return TrialResult(indiv.id, actionID, numSuccess, numTrials)
-#end
+function run_trials(w::World, indiv::BetaIndividual, numTrials::Number)::TrialResult
+    actionID = select_action(indiv)
 
-function run_trials(w::World)
-    shape = (length(w.individuals), length(w.actionProbabilities))
-    numSuccesses = zeros(shape)
-    numTrials = zeros(shape)
+    numSuccess = rand(Binomial(numTrials, w.actionProbabilities[actionID]))
 
-    for (indivID, indiv) in enumerate(w.individuals)
-        actionID = select_action(indiv)
-        numSuccesses[indivID, actionID] = rand(Binomial(w.trialsPerStep, w.actionProbabilities[actionID]))
-        numTrials[indivID, actionID] = w.trialsPerStep
-    end
-
-    return (numSuccesses, numTrials)
+    return TrialResult(indiv.id, actionID, numSuccess, numTrials)
 end
 
 function step_world(w::World)
-    (numSuccesses, numTrials) = run_trials(w)
+    trialResults = [run_trials(w, indiv, w.trialsPerStep) for indiv in w.individuals]
+
 
     for indiv in w.individuals
         neighbors = outneighbors(w.structure, indiv.id)
-        update_with_results(indiv,
-        vec(sum(numSuccesses[neighbors, :], dims=1)),
-        vec(sum(numTrials[neighbors, :], dims=1)))
+
+        neighborResults = filter(res -> res.individualID == indiv.id || res.individualID in neighbors, trialResults)
+
+        update_with_results(indiv, neighborResults)
     end
 end
 
