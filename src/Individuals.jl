@@ -28,8 +28,8 @@ end
 
 # TODO: Maybe abstract away vectors????
 struct TrialCountObservations
-    successesByAction::Vector{UInt16}
-    trialsByAction::Vector{UInt16}
+    successesByAction::Vector{Int64}
+    trialsByAction::Vector{Int64}
 end
 
 function update_beliefs(beliefs::BetaBeliefs, observations::TrialCountObservations)
@@ -71,7 +71,7 @@ function update_with_results(indiv::Individual, observations::TrialCountObservat
     update_beliefs(indiv.beliefs, observations)
 end
 
-function update_with_results(indiv::Individual, successesByAction::Vector{UInt16}, trialsByAction::Vector{UInt16})
+function update_with_results(indiv::Individual, successesByAction::Vector{Int64}, trialsByAction::Vector{Int64})
     update_beliefs(indiv.beliefs, TrialCountObservations(successesByAction, trialsByAction))
 end
 

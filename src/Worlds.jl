@@ -30,10 +30,10 @@ function World(g::LightGraphs.AbstractGraph,
     return World(g, individuals, actionPrbs, actionDists, trialsPerStep)
 end
 
-function run_trials(w::World)::Tuple{Matrix{UInt16}, Matrix{UInt16}}
+function run_trials(w::World)::Tuple{Matrix{Int64}, Matrix{Int64}}
     shape = (length(w.actionProbabilities), length(w.individuals))
-    numSuccesses = zeros(UInt16, shape)
-    numTrials = zeros(UInt16, shape)
+    numSuccesses = zeros(Int64, shape)
+    numTrials = zeros(Int64, shape)
 
     for indivID in 1:length(w.individuals)
         actionID = select_action(w.individuals[indivID])
@@ -52,12 +52,17 @@ function step_world(w::World)
         neighbors = outneighbors(w.structure, indiv.id)
         append!(neighbors, indiv.id)
 
-        successesByAction = zeros(UInt16, length(w.actionProbabilities))
-        trialsByAction = zeros(UInt16, length(w.actionProbabilities))
+        successesByAction = zeros(Int64, length(w.actionProbabilities))
+        trialsByAction = zeros(Int64, length(w.actionProbabilities))
 
         for neighborID in neighbors
             for actionID in 1:length(w.actionProbabilities)
                 trialsByAction[actionID] += numTrials[actionID, neighborID]
+            end
+        end
+
+        for neighborID in neighbors
+            for actionID in 1:length(w.actionProbabilities)
                 successesByAction[actionID] += numSuccesses[actionID, neighborID]
             end
         end
