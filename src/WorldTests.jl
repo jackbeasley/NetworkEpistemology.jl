@@ -16,7 +16,7 @@ end
 
 function run_trial_for_world(world::World, iterations::Integer)
     for _ in 1:iterations
-        step_world(world)
+        world  = step_world(world)
     end
 
     resulting_actions = [select_action(indiv) for indiv in world.individuals]

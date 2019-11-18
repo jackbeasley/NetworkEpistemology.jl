@@ -28,18 +28,13 @@ struct TrialResult
     numTrials::Int
 end
 
+function expectations(indiv::BetaIndividual)::Vector{Float64}
+    return indiv.alphaValues ./ (indiv.alphaValues .+ indiv.betaValues)
+end
+
 # Returns index (id) of chosen action based on internal belief distributions and decision process
 function select_action(indiv::BetaIndividual)::Int
-    maxAction = -1
-    maxExpectation = 0.0
-    for i in 1:length(indiv.alphaValues)
-        expectation = mean(Beta(indiv.alphaValues[i], indiv.betaValues[i]))
-        if expectation > maxExpectation
-            maxAction = i
-            maxExpectation = expectation
-        end
-    end
-    return maxAction
+    return argmax(expectations(indiv))
 end
 
 const TrialCounts = NamedTuple{(:successes, :trials), Tuple{Integer, Integer}}
@@ -72,6 +67,6 @@ function update_with_results(indiv::BetaIndividual, successesByAction::Vector{In
     return BetaIndividual(indiv.id, new_alpha_values, new_beta_values)
 end
 
-export BetaIndividual, TrialResult, TrialCounts, update_with_results, select_action
+export BetaIndividual, TrialResult, TrialCounts, update_with_results, select_action, expectations
 
 end
