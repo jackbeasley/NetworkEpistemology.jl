@@ -31,13 +31,19 @@ test_trials_per_step = [
     ("1000 trials per step", 1000)
 ]
 
+function test_world(world::World, iterations::Integer)
+    for _ in 1:iterations
+        step_world(world)
+    end
+end
+
 for (graph_label, graph) in test_world_graphs
     for (trials_per_step_label, trials_per_step) in test_trials_per_step
         for (action_probabilities_label, action_probabilities) in test_action_probabilities
             SUITE["step"][
             (graph_label, trials_per_step_label, action_probabilities_label)
-            ] = @benchmarkable step_world(w) setup=(
-            w = World($graph, $trials_per_step, $action_probabilities, Uniform(0, 4), Uniform(0, 4)))
+            ] = @benchmarkable test_world(w, 100) setup=(
+                w = World($graph, $trials_per_step, $action_probabilities, Uniform(0, 4), Uniform(0, 4)))
         end
     end
 end

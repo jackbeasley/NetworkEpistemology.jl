@@ -15,7 +15,7 @@ struct TestSettings
 end
 
 function run_trial_for_world(world::World, iterations::Integer)
-    for _ in 1:10000
+    for _ in 1:iterations
         step_world(world)
     end
 
