@@ -2,6 +2,5 @@ module NetworkEpistemologyTests
 
 import NetworkEpistemology
 
-include("individual.jl")
-include("worlds.jl")
+include("replication.jl")
 end
