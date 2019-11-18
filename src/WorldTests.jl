@@ -12,10 +12,11 @@ struct TestSettings
     alphaDist::Distributions.Distribution
     betaDist::Distributions.Distribution
     numTests::Integer
+    numSteps::Integer
 end
 
 function run_trial_for_world(world::World, iterations::Integer)
-    for _ in 1:10000
+    for _ in 1:iterations
         step_world(world)
     end
 
@@ -27,7 +28,7 @@ end
 function test_world(s::TestSettings)
     numSuccess = 0
     for _ in 1:s.numTests
-        if run_trial_for_world(World(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), 10000)
+        if run_trial_for_world(World(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), s.numSteps)
             numSuccess += 1
         end
     end
