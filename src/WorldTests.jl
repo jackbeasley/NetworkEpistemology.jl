@@ -25,6 +25,7 @@ function run_trial_for_world(world::World, iterations::Integer)
 end
 
 function test_world(s::TestSettings)
+
     numSuccess = 0
     for _ in 1:s.numTests
         if run_trial_for_world(World(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), 10000)

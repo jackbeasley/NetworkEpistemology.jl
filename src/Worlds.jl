@@ -31,15 +31,15 @@ function World(g::LightGraphs.AbstractGraph,
 end
 
 function run_trials(w::World)::Tuple{Matrix{Int64}, Matrix{Int64}}
-    shape = (length(w.actionProbabilities), length(w.individuals))
+    shape = (length(w.individuals), length(w.actionProbabilities))
     numSuccesses = zeros(Int64, shape)
     numTrials = zeros(Int64, shape)
 
     for indivID in 1:length(w.individuals)
         actionID = select_action(w.individuals[indivID])
 
-        numSuccesses[actionID, indivID] = rand(w.actionDistributions[actionID])
-        numTrials[actionID, indivID] = w.trialsPerStep
+        numSuccesses[indivID, actionID] = rand(w.actionDistributions[actionID])
+        numTrials[indivID, actionID] = w.trialsPerStep
     end
 
     return (numSuccesses, numTrials)
@@ -50,24 +50,25 @@ function step_world(w::World)
 
     for indiv in w.individuals
         neighbors = outneighbors(w.structure, indiv.id)
-        append!(neighbors, indiv.id)
 
         successesByAction = zeros(Int64, length(w.actionProbabilities))
         trialsByAction = zeros(Int64, length(w.actionProbabilities))
 
         for neighborID in neighbors
             for actionID in 1:length(w.actionProbabilities)
-                trialsByAction[actionID] += numTrials[actionID, neighborID]
+                successesByAction[actionID] += numSuccesses[neighborID, actionID]
+                trialsByAction[actionID] += numTrials[neighborID, actionID]
             end
         end
 
-        for neighborID in neighbors
-            for actionID in 1:length(w.actionProbabilities)
-                successesByAction[actionID] += numSuccesses[actionID, neighborID]
-            end
+        for actionID in 1:length(w.actionProbabilities)
+            successesByAction[actionID] += numSuccesses[indiv.id, actionID]
+            trialsByAction[actionID] += numTrials[indiv.id, actionID]
         end
 
-        update_with_results(indiv, TrialCountObservations(successesByAction, trialsByAction))
+        #neighborResults = filter(res -> res.individualID in neighbors, trialResults)
+
+        update_with_results(indiv, successesByAction, trialsByAction)
     end
 end
 
