@@ -12,7 +12,7 @@ using ..Individuals
 #    actions::Vector{AT}
 #end
 
-mutable struct World
+struct World
     structure::LightGraphs.AbstractGraph
     individuals::Vector{BetaIndividual}
     actionProbabilities::Vector{Real}
@@ -45,31 +45,29 @@ function run_trials(w::World)::Tuple{Matrix{Int64}, Matrix{Int64}}
     return (numSuccesses, numTrials)
 end
 
-function step_world(w::World)
+function step_individual(w::World, indiv::BetaIndividual, numSuccesses, numTrials)
+    neighbors = [indiv.id, outneighbors(w.structure, indiv.id)...]
+
+    successesByAction = zeros(Int64, length(w.actionProbabilities))
+    trialsByAction = zeros(Int64, length(w.actionProbabilities))
+
+    for neighborID in neighbors
+        for actionID in 1:length(w.actionProbabilities)
+            successesByAction[actionID] += numSuccesses[neighborID, actionID]
+            trialsByAction[actionID] += numTrials[neighborID, actionID]
+        end
+    end
+    return update_with_results(indiv, successesByAction, trialsByAction)
+end
+
+function step_world(w::World)::World
     (numSuccesses, numTrials) = run_trials(w)
 
-    for indiv in w.individuals
-        neighbors = outneighbors(w.structure, indiv.id)
+    new_individuals = [step_individual(w, indiv, numSuccesses, numTrials) for indiv in w.individuals]
 
-        successesByAction = zeros(Int64, length(w.actionProbabilities))
-        trialsByAction = zeros(Int64, length(w.actionProbabilities))
+    return World(w.structure, new_individuals, w.actionProbabilities,
+        w.actionDistributions, w.trialsPerStep)
 
-        for neighborID in neighbors
-            for actionID in 1:length(w.actionProbabilities)
-                successesByAction[actionID] += numSuccesses[neighborID, actionID]
-                trialsByAction[actionID] += numTrials[neighborID, actionID]
-            end
-        end
-
-        for actionID in 1:length(w.actionProbabilities)
-            successesByAction[actionID] += numSuccesses[indiv.id, actionID]
-            trialsByAction[actionID] += numTrials[indiv.id, actionID]
-        end
-
-        #neighborResults = filter(res -> res.individualID in neighbors, trialResults)
-
-        update_with_results(indiv, successesByAction, trialsByAction)
-    end
 end
 
 export World, run_trials, step_world

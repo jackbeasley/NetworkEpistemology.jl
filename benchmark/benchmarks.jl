@@ -33,7 +33,7 @@ test_trials_per_step = [
 
 function test_world(world::World, iterations::Integer)
     for _ in 1:iterations
-        step_world(world)
+        world = step_world(world)
     end
 end
 

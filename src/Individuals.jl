@@ -7,7 +7,7 @@ using Distributions
 #    beliefs::Vector{T}
 #end
 
-mutable struct BetaIndividual
+struct BetaIndividual
     id::Int64
     alphaValues::Vector{Float64}
     betaValues::Vector{Float64}
@@ -60,25 +60,16 @@ function group_results_by_action(results::Vector{TrialResult})::Dict{Int, TrialC
     return reduce(groupResultByAction, results; init = Dict{Int, TrialCounts}([]))
 end
 
-function update_with_results(indiv::BetaIndividual, results::Vector{TrialResult})
-    groupedResults = group_results_by_action(results)
-
-    for (actionID, (numSuccesses, numTrials)) in groupedResults
-        existingDist = indiv.beliefs[actionID]
-        indiv.beliefs[actionID] = Beta(
-            params(existingDist)[1] + numSuccesses,
-            params(existingDist)[2] + numTrials - numSuccesses,
-        )
-    end
-end
-
 function update_with_results(indiv::BetaIndividual, successesByAction::Vector{Int64}, trialsByAction::Vector{Int64})
+    new_alpha_values = copy(indiv.alphaValues)
+    new_beta_values = copy(indiv.betaValues)
     for actionID in 1:length(indiv.alphaValues)
         numSuccesses = successesByAction[actionID]
         numTrials = trialsByAction[actionID]
-        indiv.alphaValues[actionID] += numSuccesses
-        indiv.betaValues[actionID] += numTrials - numSuccesses
+        new_alpha_values[actionID] += numSuccesses
+        new_beta_values[actionID] += numTrials - numSuccesses
     end
+    return BetaIndividual(indiv.id, new_alpha_values, new_beta_values)
 end
 
 export BetaIndividual, TrialResult, TrialCounts, update_with_results, select_action
