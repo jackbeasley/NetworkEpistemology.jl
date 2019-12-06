@@ -30,9 +30,9 @@ test_trials_per_step = [
     ("1000 trials per step", 1000)
 ]
 
-function test_world(world::World, iterations::Integer)
+function test_step(state::ZollmanModelState, iterations::Integer)
     for _ in 1:iterations
-        world = step_world(world)
+        state = step_model(state)
     end
 end
 
@@ -41,8 +41,8 @@ for (graph_label, graph) in test_world_graphs
         for (action_probabilities_label, action_probabilities) in test_action_probabilities
             SUITE["step"][
             (graph_label, trials_per_step_label, action_probabilities_label)
-            ] = @benchmarkable test_world(w, 100) setup=(
-                w = World($graph, $trials_per_step, $action_probabilities, Uniform(0, 4), Uniform(0, 4)))
+            ] = @benchmarkable test_step(s, 100) setup=(
+                s = ZollmanModelState($graph, $trials_per_step, $action_probabilities, Uniform(0, 4), Uniform(0, 4)))
         end
     end
 end
