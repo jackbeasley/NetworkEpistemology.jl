@@ -20,7 +20,6 @@ test_world_graphs = [
     ("big complete", complete_graph(100)),
 ]
 
-
 test_action_probabilities = [
     ("two action", [0.5, 0.499]),
     ("twenty actions", [i/30.0 for i in 1:20]),

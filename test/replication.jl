@@ -28,20 +28,20 @@ wheel_params = [
         wheel_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4), 10000)
     for i in 4:12]
 
-function run_trial_for_world(world::World, iterations::Integer)
+function run_trial_for_world(state::ZollmanModelState, iterations::Integer)
     for i in 1:iterations
-        world = step_world(world)
+        state = step_model(state)
     end
 
-    resulting_actions = [select_action(indiv) for indiv in world.individuals]
+    resulting_actions = [select_action(indiv) for indiv in state.individuals]
 
-    return all(elem -> elem == argmax(world.actionProbabilities), resulting_actions)
+    return all(elem -> elem == argmax(state.facts.actionProbabilities), resulting_actions)
 end
 
 function test_world(s::TestSettings, numTests::Int)
     numSuccess = 0
     Threads.@threads for _ in 1:numTests
-        if run_trial_for_world(World(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), s.numSteps)
+        if run_trial_for_world(ZollmanModelState(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), s.numSteps)
             numSuccess += 1
         end
     end
