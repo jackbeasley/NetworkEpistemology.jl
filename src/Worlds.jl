@@ -103,18 +103,10 @@ function step_model(prev::ZollmanModelState)::ZollmanModelState
     )
 end
 
-
-
 # TODO: vectorize with StaticArrays
 function update_with_observations(indiv::BetaIndividual, observations::TotalObservations)
-    new_alpha_values = copy(indiv.alphaValues)
-    new_beta_values = copy(indiv.betaValues)
-    for actionID in 1:length(indiv.alphaValues)
-        numSuccesses = observations.numSuccesses[actionID]
-        numTrials = observations.numTrials[actionID]
-        new_alpha_values[actionID] += numSuccesses
-        new_beta_values[actionID] += numTrials - numSuccesses
-    end
+    new_alpha_values = indiv.alphaValues .+ observations.numSuccesses
+    new_beta_values = indiv.betaValues .+ observations.numTrials .- observations.numSuccesses
     return BetaIndividual(indiv.id, new_alpha_values, new_beta_values)
 end
 
