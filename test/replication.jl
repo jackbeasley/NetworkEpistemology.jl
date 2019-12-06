@@ -1,87 +1,100 @@
 module WorldsTests
 import ..NetworkEpistemology
+import Base.Threads.@threads
 
 using NetworkEpistemology.Worlds
-using NetworkEpistemology.WorldTests
 using NetworkEpistemology.Individuals
 
-using Test, Distributions, LightGraphs, Printf
+using Test, Distributions, LightGraphs, Printf, DataFrames, CSV
 
-cycle_params = [TestSettings(cycle_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4),
-80) for i in 4:12]
+struct TestSettings
+    g::LightGraphs.AbstractGraph
+    trialsPerStep::Integer
+    actionPrbs::Vector{Float64}
+    alphaDist::Distributions.Distribution
+    betaDist::Distributions.Distribution
+    numSteps::Int
+end
 
-cycle_correct_results = [
-    0.657,
-    0.729,
-    0.759,
-    0.826,
-    0.872,
-    0.909,
-    0.909,
-    0.927,
-    0.954,
-]
+cycle_params = [TestSettings(cycle_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4), 10000) for i in 4:12]
 
 complete_params = [
     TestSettings(
-        complete_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4),
-        80)
-    for i in 2:12]
-
-complete_correct_results = [
-    0.541,
-    0.553,
-    0.570,
-    0.584,
-    0.603,
-    0.583,
-    0.562,
-    0.573,
-    0.624,
-    0.642,
-    0.589,
-]
+        complete_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4), 10000)
+    for i in 3:11]
 
 wheel_params = [
     TestSettings(
-        wheel_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4),
-        80)
+        wheel_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4), 10000)
     for i in 4:12]
 
-wheel_correct_results = [
-    0.608,
-    0.637,
-    0.696,
-    0.730,
-    0.765,
-    0.812,
-    0.844,
-    0.863,
-    0.878,
-]
+function run_trial_for_world(world::World, iterations::Integer)
+    for i in 1:iterations
+        world = step_world(world)
+    end
+
+    resulting_actions = [select_action(indiv) for indiv in world.individuals]
+
+    return all(elem -> elem == argmax(world.actionProbabilities), resulting_actions)
+end
+
+function test_world(s::TestSettings, numTests::Int)
+    numSuccess = 0
+    Threads.@threads for _ in 1:numTests
+        if run_trial_for_world(World(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), s.numSteps)
+            numSuccess += 1
+        end
+    end
+    return (numSuccess / numTests)
+end
 
 function run_test(params, correct_results, epsilon)
     for (param, correct_result) in zip(params, correct_results)
         graph_size = nv(param.g)
         @testset "Graph size: $graph_size" begin
-            result = test_world(param)
+            result = test_world(param, 250)
             @test result < correct_result + epsilon
             @test result > correct_result - epsilon
         end
     end
 end
 
+function train_test(params, filename)
+    results = DataFrame(
+        PrbAgree = [test_world(param, 1500) for param in params], # We use even higher precision than Zollman so test values are trustworthy
+        GraphSize = [nv(param.g) for param in params]
+    )
+    CSV.write(filename, results)
+end
+
+const TRAIN = false
+const CYCLE_GRAPH_RESULTS_FILE = "cycle_graphs_test.csv"
+const COMPLETE_GRAPH_RESULTS_FILE = "complete_graphs_test.csv"
+const WHEEL_GRAPH_RESULTS_FILE = "wheel_graphs_test.csv"
+
 @testset "ZollmanReplication" begin
     @testset "Cycle Graphs" begin
-        run_test(cycle_params, cycle_correct_results, 0.1)
+        if TRAIN
+            train_test(cycle_params, CYCLE_GRAPH_RESULTS_FILE)
+        else
+            run_test(cycle_params, CSV.read(CYCLE_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
+        end
     end
 
     @testset "Complete Graphs" begin
-        run_test(complete_params, complete_correct_results, 0.1)
+        if TRAIN
+            train_test(complete_params, COMPLETE_GRAPH_RESULTS_FILE)
+        else
+            run_test(complete_params, CSV.read(COMPLETE_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
+        end
     end
 
     @testset "Wheel Graphs" begin
-        run_test(wheel_params, wheel_correct_results, 0.11)
+        if TRAIN
+            train_test(wheel_params, WHEEL_GRAPH_RESULTS_FILE)
+        else
+            run_test(wheel_params, CSV.read(WHEEL_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
+        end
     end
 end
 

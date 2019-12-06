@@ -55,6 +55,7 @@ function group_results_by_action(results::Vector{TrialResult})::Dict{Int, TrialC
     return reduce(groupResultByAction, results; init = Dict{Int, TrialCounts}([]))
 end
 
+
 function update_with_results(indiv::BetaIndividual, successesByAction::Vector{Int64}, trialsByAction::Vector{Int64})
     new_alpha_values = copy(indiv.alphaValues)
     new_beta_values = copy(indiv.betaValues)
