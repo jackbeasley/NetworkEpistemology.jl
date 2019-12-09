@@ -1,6 +1,6 @@
 using BenchmarkTools, LightGraphs, Distributions
 
-using NetworkEpistemology, NetworkEpistemology.WorldTests, NetworkEpistemology.Worlds
+using NetworkEpistemology
 
 const SUITE = BenchmarkGroup()
 
@@ -30,7 +30,7 @@ test_trials_per_step = [
     ("1000 trials per step", 1000)
 ]
 
-function test_step(state::ZollmanModelState, iterations::Integer)
+function test_step(state::TransientDiversityModelState, iterations::Integer)
     for _ in 1:iterations
         state = step_model(state)
     end
@@ -42,7 +42,7 @@ for (graph_label, graph) in test_world_graphs
             SUITE["step"][
             (graph_label, trials_per_step_label, action_probabilities_label)
             ] = @benchmarkable test_step(s, 100) setup=(
-                s = ZollmanModelState($graph, $trials_per_step, $action_probabilities, Uniform(0, 4), Uniform(0, 4)))
+                s = TransientDiversityModelState($graph, $trials_per_step, $action_probabilities, Uniform(0, 4), Uniform(0, 4)))
         end
     end
 end

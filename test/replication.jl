@@ -1,9 +1,12 @@
 module WorldsTests
-import ..NetworkEpistemology
 import Base.Threads.@threads
 
-using NetworkEpistemology.Worlds
-using NetworkEpistemology.Individuals
+using ..NetworkEpistemology.Core
+using ..NetworkEpistemology.Facts
+using ..NetworkEpistemology.ObservationRules
+using ..NetworkEpistemology.Individuals
+using ..NetworkEpistemology.Beliefs
+using ..NetworkEpistemology.TransientDiversityModel: step_model, TransientDiversityModelState
 
 using Test, Distributions, LightGraphs, Printf, DataFrames, CSV
 
@@ -28,24 +31,24 @@ wheel_params = [
         wheel_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4), 10000)
     for i in 4:12]
 
-function run_trial_for_world(state::ZollmanModelState, iterations::Integer)
+function run_trial_for_world(state::TransientDiversityModelState, iterations::Integer)
     for i in 1:iterations
         state = step_model(state)
     end
 
-    resulting_actions = [select_action(indiv) for indiv in state.individuals]
+    resulting_actions = [select_fact_to_observe(indiv) for indiv in state.individuals]
 
     return all(elem -> elem == argmax(state.facts.actionProbabilities), resulting_actions)
 end
 
 function test_world(s::TestSettings, numTests::Int)
-    numSuccess = 0
+    numSuccess = Threads.Atomic{Int}(0)
     Threads.@threads for _ in 1:numTests
-        if run_trial_for_world(ZollmanModelState(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), s.numSteps)
-            numSuccess += 1
+        if run_trial_for_world(TransientDiversityModelState(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), s.numSteps)
+            Threads.atomic_add!(numSuccess, 1)
         end
     end
-    return (numSuccess / numTests)
+    return (numSuccess[] / numTests)
 end
 
 function run_test(params, correct_results, epsilon)
