@@ -1,56 +1,83 @@
 module TestBench
 
-using DataFrames
+using DataFrames, Printf
 
 using ..Core
 using ..Individuals
 
 abstract type AbstractStepStats end
 
-struct ExperimentSpec{MT <: AbstractModelState}
-    initialState::MT
-    maxSteps::Int
-    statCheckInterval::Int
-    maxTrials::Int
-end
+abstract type AbstractExperimentSpec end
 
-macro step(stateType, stepStatsType, )
-end
-
-
-function run_experiment(spec::ExperimentSpec)::DataFrame
-
-    prevMeasurementState = spec.initialState
-    prevState = spec.initialState
-    for i in 1:spec.maxTrials
-        prevState = step_model(prevState)
-        if i % spec.statCheckInterval
-            
+macro gen_df_helper(stepStatsType, specType, statName)
+    functionName = Symbol(@sprintf "%s_by_run_df" statName)
+    return esc(:( 
+        function $functionName(stats::Matrix{$(stepStatsType)}, spec::$(specType))::DataFrame
+            df = DataFrame(
+                StepNumber = 1:spec.statCheckInterval:spec.maxSteps,
+            )
+            for i in 1:size(stats)[1]
+                colName = Symbol(@sprintf "Run%d" i)
+                df[!, colName] = [stats[i,j].$statName for j in 1:size(stats)[2]]
+            end
+            return df
         end
+    ))
+end
+
+macro gen_test_fixture(stateType, stepStatsType, experimentName)
+
+    experimentSpecType = Symbol(@sprintf "%sExperimentSpec" experimentName)
+
+    experimentSpecDef = :(struct $(esc(experimentSpecType))
+        initialState::$(esc(stateType))
+        maxSteps::Int
+        statCheckInterval::Int
+        maxTrials::Int
+    end)
+
+    runTrialDef = esc(:(function run_trial(spec::$experimentSpecType)::Vector{$stepStatsType}
+        stats = Vector{$stepStatsType}(undef, Int(spec.maxSteps/spec.statCheckInterval))
+        statsIndex = 1
+        prevMeasurementState = copy(spec.initialState)
+        state = spec.initialState
+        for i in 1:spec.maxSteps
+            state = step_model(state)
+            if i % spec.statCheckInterval == 0
+                stats[statsIndex] = evaluate_step(state, prevMeasurementState)
+                if should_stop(stats[statsIndex])
+                    finalStepStats = evaluate_step(state, state)
+                    for j in (statsIndex+1):length(stats)
+                        stats[j] = finalStepStats
+                    end
+                    return stats
+                end
+                prevMeasurementState = copy(state)
+                statsIndex += 1
+            end
+        end
+        return stats
+    end))
+
+    runExperimentDef = esc(:(function run_experiment(spec::$experimentSpecType)::Matrix{$stepStatsType}
+        stats = Matrix{$stepStatsType}(undef, 
+        (spec.maxTrials, Int(spec.maxSteps/spec.statCheckInterval)))
+        for i in 1:spec.maxTrials
+            stats[i,:] = run_trial(spec)
+        end
+        return stats
+    end))
+
+    return quote
+        $experimentSpecDef
+
+        $runTrialDef
+
+        $runExperimentDef
     end
 end
 
-# function run_trial_for_world(state::ModelState, iterations::Integer)
-#     for i in 1:iterations
-#         state = step_model(state)
-#     end
-# 
-#     resulting_actions = [select_fact_to_observe(indiv) for indiv in state.individuals]
-# 
-#     return all(elem -> elem == argmax(state.facts.actionProbabilities), resulting_actions)
-# end
-
-# function test_world(s::TestSettings, numTests::Int)
-#     numSuccess = Threads.Atomic{Int}(0)
-#     Threads.@threads for _ in 1:numTests
-#         if run_trial_for_world(TransientDiversityModelState(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), s.numSteps)
-#             Threads.atomic_add!(numSuccess, 1)
-#         end
-#     end
-#     return (numSuccess[] / numTests)
-# end
-
-export AbstractStepStats, ExperimentSpec
+export AbstractStepStats, @gen_df_helper, @gen_test_fixture
 
 
 end
