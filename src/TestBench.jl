@@ -38,23 +38,21 @@ macro gen_test_fixture(stateType, stepStatsType, experimentName)
 
     runTrialDef = esc(:(function run_trial(spec::$experimentSpecType)::Vector{$stepStatsType}
         stats = Vector{$stepStatsType}(undef, Int(spec.maxSteps/spec.statCheckInterval))
-        statsIndex = 1
-        prevMeasurementState = copy(spec.initialState)
-        state = spec.initialState
-        for i in 1:spec.maxSteps
-            state = step_model(state)
-            if i % spec.statCheckInterval == 0
-                stats[statsIndex] = evaluate_step(state, prevMeasurementState)
-                if should_stop(stats[statsIndex])
-                    finalStepStats = evaluate_step(state, state)
-                    for j in (statsIndex+1):length(stats)
-                        stats[j] = finalStepStats
-                    end
-                    return stats
-                end
-                prevMeasurementState = copy(state)
-                statsIndex += 1
+        prevMeasurementState = spec.initialState
+        for i in 1:length(stats)
+            tmpState = step_model(prevMeasurementState)
+            for _ in 2:spec.statCheckInterval
+                tmpState = step_model(tmpState)
             end
+            stats[i] = evaluate_step(tmpState, prevMeasurementState)
+            if should_stop(stats[i])
+                finalStepStats = evaluate_step(tmpState, tmpState)
+                for j in (i+1):length(stats)
+                    stats[j] = finalStepStats
+                end
+                return stats
+            end
+            prevMeasurementState = tmpState
         end
         return stats
     end))
