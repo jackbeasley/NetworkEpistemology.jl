@@ -11,7 +11,11 @@ abstract type AbstractBeliefs end
 
 abstract type AbstractIndividual end
 
-struct ModelState{ST <: AbstractGraph, FT <: AbstractFacts, IT <: AbstractIndividual}
+# Anything that is stepable
+abstract type AbstractModelState end
+
+# Network epistemology model template.
+struct ModelState{ST <: AbstractGraph, FT <: AbstractFacts, IT <: AbstractIndividual} <: AbstractModelState
     structure::ST
     facts::FT
     individuals::Vector{IT}
@@ -55,6 +59,6 @@ macro step(expr)
     ))
 end
 
-export Facts, ObservationRule, Beliefs, Individual, ModelState, @step
+export Facts, ObservationRule, Beliefs, Individual, ModelState, @step, AbstractModelState
 
 end
