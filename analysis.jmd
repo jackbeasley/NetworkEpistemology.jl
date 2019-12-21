@@ -1,0 +1,11 @@
+---
+title: Replicating and Understanding Transient Diversity Models
+author: Jack Beasley
+---
+```julia
+using DataFrames
+```
+
+```julia
+DataFrame(A = [1, 2, 3, 4], B = [1, 2, 4, 8])
+```

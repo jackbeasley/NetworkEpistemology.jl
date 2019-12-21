@@ -9,7 +9,7 @@ using ..Individuals
 using ..Beliefs
 
 export step_model
-@step const TransientDiversityModelState = ModelState{LightGraphs.SimpleGraph, BinomialActionFacts, BetaIndividual}
+@step const TransientDiversityModelState = ModelState{LightGraphs.SimpleDiGraph, BinomialActionFacts, BetaIndividual}
 
 TransientDiversityModelState(
     g::LightGraphs.AbstractGraph, 

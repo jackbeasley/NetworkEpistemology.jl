@@ -6,56 +6,82 @@ using ..NetworkEpistemology.Facts
 using ..NetworkEpistemology.ObservationRules
 using ..NetworkEpistemology.Individuals
 using ..NetworkEpistemology.Beliefs
+using ..NetworkEpistemology.TestBench
 using ..NetworkEpistemology.TransientDiversityModel: step_model, TransientDiversityModelState
 
 using Test, Distributions, LightGraphs, Printf, DataFrames, CSV
+import Base.Threads.@spawn
 
-struct TestSettings
-    g::LightGraphs.AbstractGraph
-    trialsPerStep::Integer
-    actionPrbs::Vector{Float64}
-    alphaDist::Distributions.Distribution
-    betaDist::Distributions.Distribution
-    numSteps::Int
-end
-
-cycle_params = [TestSettings(cycle_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4), 10000) for i in 4:12]
+cycle_params = [TransientDiversityModelState(SimpleDiGraph(cycle_graph(i)), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4)) for i in 4:12]
 
 complete_params = [
-    TestSettings(
-        complete_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4), 10000)
+    TransientDiversityModelState(SimpleDiGraph(complete_graph(i)), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4))
     for i in 3:11]
 
 wheel_params = [
-    TestSettings(
-        wheel_graph(i), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4), 10000)
+    TransientDiversityModelState(
+        SimpleDiGraph(wheel_graph(i)), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4))
     for i in 4:12]
 
-function run_trial_for_world(state::TransientDiversityModelState, iterations::Integer)
-    for i in 1:iterations
-        state = step_model(state)
-    end
-
-    resulting_actions = [select_fact_to_observe(indiv) for indiv in state.individuals]
-
-    return all(elem -> elem == argmax(state.facts.actionProbabilities), resulting_actions)
+struct TransientDiversityStepStats
+    agree::Bool
+    fractionCorrect::Rational{Int8}
+    totalBeliefChange::Float64
 end
 
-function test_world(s::TestSettings, numTests::Int)
-    numSuccess = Threads.Atomic{Int}(0)
-    Threads.@threads for _ in 1:numTests
-        if run_trial_for_world(TransientDiversityModelState(s.g, s.trialsPerStep, s.actionPrbs, s.alphaDist, s.betaDist), s.numSteps)
-            Threads.atomic_add!(numSuccess, 1)
+function evaluate_step(cur::TransientDiversityModelState, prev::TransientDiversityModelState)::TransientDiversityStepStats
+    correct_action = argmax(cur.facts.actionProbabilities)
+
+    number_correct = 0
+    total_change = 0.0
+    for i in 1:length(cur.individuals)
+        if select_fact_to_observe(cur.individuals[i]) == correct_action
+            number_correct += 1
         end
+        total_change += sum(
+            abs.(expectations(cur.individuals[i].beliefs) .- expectations(prev.individuals[i].beliefs))
+        )
     end
-    return (numSuccess[] / numTests)
+    fraction = number_correct // length(cur.individuals)
+
+    return TransientDiversityStepStats(
+        fraction == 1,
+        fraction,
+        total_change
+    )
+end
+
+function should_stop(stats::TransientDiversityStepStats)::Bool
+    return false
+end
+
+@gen_test_fixture TransientDiversityModelState TransientDiversityStepStats TransientDiversity
+
+@gen_df_helper TransientDiversityStepStats TransientDiversityExperimentSpec agree
+
+@gen_df_helper TransientDiversityStepStats TransientDiversityExperimentSpec fractionCorrect
+
+@gen_df_helper TransientDiversityStepStats TransientDiversityExperimentSpec totalBeliefChange
+
+function calculate_agreement_ratio(experimentSpec)
+    println(experimentSpec.initialState.structure)
+    results = run_experiment(experimentSpec)
+    ratio = mean([res.agree for res in results[:, end]])
+    println(ratio)
+    println()
+    return ratio
 end
 
 function run_test(params, correct_results, epsilon)
     for (param, correct_result) in zip(params, correct_results)
-        graph_size = nv(param.g)
+        graph_size = nv(param.structure)
         @testset "Graph size: $graph_size" begin
-            result = test_world(param, 250)
+            result = calculate_agreement_ratio(TransientDiversityExperimentSpec(
+                param,
+                10000,
+                10000,
+                300
+            ))
             @test result < correct_result + epsilon
             @test result > correct_result - epsilon
         end
@@ -64,13 +90,19 @@ end
 
 function train_test(params, filename)
     results = DataFrame(
-        PrbAgree = [test_world(param, 1500) for param in params], # We use even higher precision than Zollman so test values are trustworthy
-        GraphSize = [nv(param.g) for param in params]
+        GraphSize = [nv(param.structure) for param in params],
+        PrbAgree = [
+            calculate_agreement_ratio(TransientDiversityExperimentSpec(
+                param,
+                10000,
+                1,
+                3000
+            )) for param in params], # We use even higher precision than Zollman so test values are trustworthy
     )
     CSV.write(filename, results)
 end
 
-const TRAIN = false
+const TRAIN = true
 const CYCLE_GRAPH_RESULTS_FILE = "cycle_graphs_test.csv"
 const COMPLETE_GRAPH_RESULTS_FILE = "complete_graphs_test.csv"
 const WHEEL_GRAPH_RESULTS_FILE = "wheel_graphs_test.csv"

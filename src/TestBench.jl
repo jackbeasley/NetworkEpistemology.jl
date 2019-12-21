@@ -1,6 +1,7 @@
 module TestBench
 
 using DataFrames, Printf
+import Base.Threads.@spawn
 
 using ..Core
 using ..Individuals

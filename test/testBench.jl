@@ -8,10 +8,6 @@ struct TestModelState <: AbstractModelState
     value::Int
 end
 
-function copy(state::TestModelState)::TestModelState
-    return TestModelState(state.value)
-end
-
 function step_model(state::TestModelState)::TestModelState
     return TestModelState(2 * state.value)
 end
