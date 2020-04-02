@@ -3,19 +3,19 @@ module Beliefs
 using Distributions: Distribution
 using ..Core: AbstractBeliefs
 using ..ObservationRules: TallyObservations
-
 struct BetaBeliefs <: AbstractBeliefs
     alphaValues::Vector{Float64}
     betaValues::Vector{Float64}
 end
-
 struct BetaBeliefParams
     numFacts::Int
     alphaDist::Distribution
     betaDist::Distribution
 end
 
-BetaBeliefs(params::BetaBeliefParams) = BetaBeliefs([rand(params.alphaDist) for _ = 1:params.numFacts], [rand(params.betaDist) for _ = 1:params.numFacts])
+BetaBeliefs(params::BetaBeliefParams) = BetaBeliefs(
+    [rand(params.alphaDist) for _ = 1:params.numFacts], 
+    [rand(params.betaDist) for _ = 1:params.numFacts])
 
 function expectations(beliefs::BetaBeliefs)::Vector{Float64}
     return beliefs.alphaValues ./ (beliefs.alphaValues .+ beliefs.betaValues)
