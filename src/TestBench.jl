@@ -58,11 +58,17 @@ macro gen_test_fixture(stateType, stepStatsType, experimentName)
         return stats
     end))
 
-    runExperimentDef = esc(:(function run_experiment(spec::$experimentSpecType)::Matrix{$stepStatsType}
+    runExperimentsDef = esc(:(function run_experiments(specs::AbstractVector{$experimentSpecType})::Matrix{$stepStatsType}
+
+        tasks = [@spawn run_trial(spec) for spec in specs]
+        results = map(fetch, tasks) # Wait for tasks to complete
+
+        #results = [experiment() for _ in 1:spec.maxTrials]
+
         stats = Matrix{$stepStatsType}(undef, 
-        (spec.maxTrials, Int(spec.maxSteps/spec.statCheckInterval)))
-        for i in 1:spec.maxTrials
-            stats[i,:] = run_trial(spec)
+        (length(specs), Int(specs[1].maxSteps/specs[1].statCheckInterval)))
+        for (i, trialTask) in enumerate(results)
+            stats[i,:] = fetch(trialTask)
         end
         return stats
     end))
@@ -72,7 +78,7 @@ macro gen_test_fixture(stateType, stepStatsType, experimentName)
 
         $runTrialDef
 
-        $runExperimentDef
+        $runExperimentsDef
     end
 end
 

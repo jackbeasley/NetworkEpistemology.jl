@@ -1,5 +1,4 @@
 module WorldsTests
-import Base.Threads.@threads
 
 using ..NetworkEpistemology.Core
 using ..NetworkEpistemology.Facts
@@ -9,23 +8,13 @@ using ..NetworkEpistemology.Beliefs
 using ..NetworkEpistemology.TestBench
 using ..NetworkEpistemology.TransientDiversityModel: step_model, TransientDiversityModelState
 
+using Statistics, HypothesisTests
 using Test, Distributions, LightGraphs, Printf, DataFrames, CSV
 import Base.Threads.@spawn
-
-cycle_params = [TransientDiversityModelState(SimpleDiGraph(cycle_graph(i)), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4)) for i in 4:12]
-
-complete_params = [
-    TransientDiversityModelState(SimpleDiGraph(complete_graph(i)), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4))
-    for i in 3:11]
-
-wheel_params = [
-    TransientDiversityModelState(
-        SimpleDiGraph(wheel_graph(i)), 1000, [0.5, 0.499], Uniform(0, 4), Uniform(0, 4))
-    for i in 4:12]
-
 struct TransientDiversityStepStats
     agree::Bool
-    fractionCorrect::Rational{Int8}
+    incorrectNodes::Vector{Int64}
+    fractionCorrect::Rational{Int16}
     totalBeliefChange::Float64
 end
 
@@ -34,9 +23,13 @@ function evaluate_step(cur::TransientDiversityModelState, prev::TransientDiversi
 
     number_correct = 0
     total_change = 0.0
+    incorrectNodes = Vector{Int64}()
     for i in 1:length(cur.individuals)
         if select_fact_to_observe(cur.individuals[i]) == correct_action
             number_correct += 1
+        end
+        if select_fact_to_observe(prev.individuals[i]) != correct_action
+            append!(incorrectNodes, i)
         end
         total_change += sum(
             abs.(expectations(cur.individuals[i].beliefs) .- expectations(prev.individuals[i].beliefs))
@@ -46,6 +39,7 @@ function evaluate_step(cur::TransientDiversityModelState, prev::TransientDiversi
 
     return TransientDiversityStepStats(
         fraction == 1,
+        incorrectNodes,
         fraction,
         total_change
     )
@@ -57,11 +51,27 @@ end
 
 @gen_test_fixture TransientDiversityModelState TransientDiversityStepStats TransientDiversity
 
-@gen_df_helper TransientDiversityStepStats TransientDiversityExperimentSpec agree
 
-@gen_df_helper TransientDiversityStepStats TransientDiversityExperimentSpec fractionCorrect
+function test_params(graph::Function, size::Int)
+    binomial_probs = [0.5, 0.499]
+    return TransientDiversityExperimentSpec(
+        TransientDiversityModelState(
+            SimpleDiGraph(graph(size)),
+            BinomialActionFacts(binomial_probs, 1000),
+            [BetaIndividual(BetaBeliefs(
+                [rand(Uniform(0, 4)) for _ = 1:length(binomial_probs)], 
+                [rand(Uniform(0, 4)) for _ = 1:length(binomial_probs)]
+                )) for i in 1:size]
+        ),
+        10000,
+        100,
+        1000
+    ) 
+end
 
-@gen_df_helper TransientDiversityStepStats TransientDiversityExperimentSpec totalBeliefChange
+cycle_sizes = collect(4:11)
+complete_sizes = collect(3:11)
+wheel_sizes = collect(5:11)
 
 function calculate_agreement_ratio(experimentSpec)
     println(experimentSpec.initialState.structure)
@@ -72,18 +82,18 @@ function calculate_agreement_ratio(experimentSpec)
     return ratio
 end
 
-function run_test(params, correct_results, epsilon)
-    for (param, correct_result) in zip(params, correct_results)
-        graph_size = nv(param.structure)
+function run_test(graph_type::Function, graph_sizes::AbstractVector{Int}, correct_results, epsilon)
+    for (graph_size, correct_result) in zip(graph_sizes, correct_results)
         @testset "Graph size: $graph_size" begin
-            result = calculate_agreement_ratio(TransientDiversityExperimentSpec(
-                param,
-                10000,
-                10000,
-                300
-            ))
-            @test result < correct_result + epsilon
-            @test result > correct_result - epsilon
+            results = run_experiments([test_params(graph_type, graph_size) for _ in 1:1000])
+
+            ratio = mean([res.agree for res in results[:, end]])
+
+
+            (low, high) = confint(BinomialTest([res.agree for res in results[:, end]]); level = .99)
+            println(@sprintf "size: %d ratio: %f low: %f high: %f actual: %f" graph_size ratio low high correct_result)
+            @test correct_result > low
+            @test correct_result < high
         end
     end
 end
@@ -91,18 +101,12 @@ end
 function train_test(params, filename)
     results = DataFrame(
         GraphSize = [nv(param.structure) for param in params],
-        PrbAgree = [
-            calculate_agreement_ratio(TransientDiversityExperimentSpec(
-                param,
-                10000,
-                1,
-                3000
-            )) for param in params], # We use even higher precision than Zollman so test values are trustworthy
+        PrbAgree = [calculate_agreement_ratio(param) for param in params],
     )
     CSV.write(filename, results)
 end
 
-const TRAIN = true
+const TRAIN = false
 const CYCLE_GRAPH_RESULTS_FILE = "cycle_graphs_test.csv"
 const COMPLETE_GRAPH_RESULTS_FILE = "complete_graphs_test.csv"
 const WHEEL_GRAPH_RESULTS_FILE = "wheel_graphs_test.csv"
@@ -112,7 +116,7 @@ const WHEEL_GRAPH_RESULTS_FILE = "wheel_graphs_test.csv"
         if TRAIN
             train_test(cycle_params, CYCLE_GRAPH_RESULTS_FILE)
         else
-            run_test(cycle_params, CSV.read(CYCLE_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
+            run_test(cycle_graph, cycle_sizes, CSV.read(CYCLE_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
         end
     end
 
@@ -120,7 +124,7 @@ const WHEEL_GRAPH_RESULTS_FILE = "wheel_graphs_test.csv"
         if TRAIN
             train_test(complete_params, COMPLETE_GRAPH_RESULTS_FILE)
         else
-            run_test(complete_params, CSV.read(COMPLETE_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
+            run_test(complete_graph, complete_sizes, CSV.read(COMPLETE_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
         end
     end
 
@@ -128,7 +132,7 @@ const WHEEL_GRAPH_RESULTS_FILE = "wheel_graphs_test.csv"
         if TRAIN
             train_test(wheel_params, WHEEL_GRAPH_RESULTS_FILE)
         else
-            run_test(wheel_params, CSV.read(WHEEL_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
+            run_test(wheel_graph, wheel_sizes, CSV.read(WHEEL_GRAPH_RESULTS_FILE).PrbAgree, 0.1)
         end
     end
 end
