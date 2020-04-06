@@ -2,7 +2,7 @@ module Facts
 
 using Distributions: Binomial
 
-using ..Interface: AbstractFacts
+using ..Interface
 
 struct BinomialActionFacts <: AbstractFacts
     actionProbabilities::Vector{Float64}
@@ -22,13 +22,11 @@ struct BinomialActionObservation
     numTrials::Int
 end
 
-observation_type() = BinomialActionObservation
-
-function num_facts(baf::BinomialActionFacts)
+function Interface.num_facts(baf::BinomialActionFacts)
     return length(baf.actionProbabilities)
 end
 
-function observe_fact(baf::BinomialActionFacts, factID::Int)::BinomialActionObservation
+function Interface.observe_fact(baf::BinomialActionFacts, factID::Int)::BinomialActionObservation
     return BinomialActionObservation(
         factID,
         rand(baf.actionDistributions[factID]),

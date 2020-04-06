@@ -1,6 +1,6 @@
 module ObservationRules
 
-using ..Interface: AbstractObservationRule
+using ..Interface
 using ..Facts: BinomialActionObservation
 
 mutable struct TallyObservations <: AbstractObservationRule
@@ -10,7 +10,7 @@ end
 
 TallyObservations(numActions::Int) = TallyObservations(Vector([0 for _ in 1:numActions]), Vector([0 for _ in 1:numActions]))
 
-function observe_results(baf::BinomialActionObservation, observations_ref::TallyObservations)
+function Interface.observe_results(baf::BinomialActionObservation, observations_ref::TallyObservations)
     observations_ref.numSuccesses[baf.factID] += baf.numSuccesses
     observations_ref.numTrials[baf.factID] += baf.numTrials
 end
