@@ -1,6 +1,6 @@
 module WorldsTests
 
-using ..NetworkEpistemology.Core
+using ..NetworkEpistemology.Interface
 using ..NetworkEpistemology.Facts
 using ..NetworkEpistemology.ObservationRules
 using ..NetworkEpistemology.Individuals
@@ -11,14 +11,14 @@ using ..NetworkEpistemology.TransientDiversityModel: step_model, TransientDivers
 using Statistics, HypothesisTests
 using Test, Distributions, LightGraphs, Printf, DataFrames, CSV
 import Base.Threads.@spawn
-struct TransientDiversityStepStats
+struct TransientDiversityStepStats <: AbstractStepStats
     agree::Bool
     incorrectNodes::Vector{Int64}
     fractionCorrect::Rational{Int16}
     totalBeliefChange::Float64
 end
 
-function evaluate_step(cur::TransientDiversityModelState, prev::TransientDiversityModelState)::TransientDiversityStepStats
+function Interface.evaluate_step(cur::TransientDiversityModelState, prev::TransientDiversityModelState)::TransientDiversityStepStats
     correct_action = argmax(cur.facts.actionProbabilities)
 
     number_correct = 0
@@ -45,28 +45,20 @@ function evaluate_step(cur::TransientDiversityModelState, prev::TransientDiversi
     )
 end
 
-function should_stop(stats::TransientDiversityStepStats)::Bool
+function TestBench.should_stop(stats::TransientDiversityStepStats)::Bool
     return false
 end
 
-@gen_test_fixture TransientDiversityModelState TransientDiversityStepStats TransientDiversity
-
-
 function test_params(graph::Function, size::Int)
     binomial_probs = [0.5, 0.499]
-    return TransientDiversityExperimentSpec(
-        TransientDiversityModelState(
+    return TransientDiversityModelState(
             SimpleDiGraph(graph(size)),
             BinomialActionFacts(binomial_probs, 1000),
             [BetaIndividual(BetaBeliefs(
                 [rand(Uniform(0, 4)) for _ = 1:length(binomial_probs)], 
                 [rand(Uniform(0, 4)) for _ = 1:length(binomial_probs)]
                 )) for i in 1:size]
-        ),
-        10000,
-        100,
-        1000
-    ) 
+        )
 end
 
 cycle_sizes = collect(4:11)
@@ -85,7 +77,7 @@ end
 function run_test(graph_type::Function, graph_sizes::AbstractVector{Int}, correct_results, epsilon)
     for (graph_size, correct_result) in zip(graph_sizes, correct_results)
         @testset "Graph size: $graph_size" begin
-            results = run_experiments([test_params(graph_type, graph_size) for _ in 1:1000])
+            results = run_experiments([test_params(graph_type, graph_size) for _ in 1:1000], TransientDiversityStepStats, 10000)
 
             ratio = mean([res.agree for res in results[:, end]])
 

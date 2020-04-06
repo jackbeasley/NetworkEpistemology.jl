@@ -2,7 +2,7 @@ module NetworkEpistemology
 
 using Reexport
 
-include("Core.jl"); @reexport using .Core
+include("Interface.jl"); @reexport using .Interface
 include("Facts.jl"); @reexport using .Facts
 include("ObservationRules.jl"); @reexport using .ObservationRules
 include("Beliefs.jl"); @reexport using .Beliefs

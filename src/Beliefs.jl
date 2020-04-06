@@ -1,7 +1,7 @@
 module Beliefs
 
 using Distributions: Distribution
-using ..Core: AbstractBeliefs
+using ..Interface: AbstractBeliefs
 using ..ObservationRules: TallyObservations
 struct BetaBeliefs <: AbstractBeliefs
     alphaValues::Vector{Float64}

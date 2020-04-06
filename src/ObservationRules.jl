@@ -1,6 +1,6 @@
 module ObservationRules
 
-using ..Core: AbstractObservationRule
+using ..Interface: AbstractObservationRule
 using ..Facts: BinomialActionObservation
 
 mutable struct TallyObservations <: AbstractObservationRule

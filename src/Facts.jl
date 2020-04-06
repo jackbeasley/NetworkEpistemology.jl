@@ -2,7 +2,7 @@ module Facts
 
 using Distributions: Binomial
 
-using ..Core: AbstractFacts
+using ..Interface: AbstractFacts
 
 struct BinomialActionFacts <: AbstractFacts
     actionProbabilities::Vector{Float64}

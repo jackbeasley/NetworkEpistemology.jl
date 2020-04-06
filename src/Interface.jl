@@ -1,4 +1,4 @@
-module Core
+module Interface
 
 using LightGraphs
 
@@ -21,11 +21,8 @@ struct ModelState{ST <: AbstractGraph, FT <: AbstractFacts, IT <: AbstractIndivi
     individuals::Vector{IT}
 end
 
-function num_facts
-end
-
-function begin_observation
-end
+step_model(s::AbstractModelState) = error("No step_model method defined for state type $(typeof(s))")
+evaluate_step(s::AbstractModelState) = error("No evaluate_step method defined for state type $(typeof(s))")
 
 macro step(expr)
     modelStateType = expr.args[1].args[1]
@@ -59,6 +56,6 @@ macro step(expr)
     ))
 end
 
-export Facts, ObservationRule, Beliefs, Individual, ModelState, @step, AbstractModelState
+export Facts, ObservationRule, Beliefs, Individual, ModelState, @step, AbstractModelState, step_model, evaluate_step
 
 end

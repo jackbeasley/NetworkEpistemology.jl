@@ -1,6 +1,6 @@
 module Individuals
 
-using ..Core: AbstractBeliefs, AbstractIndividual
+using ..Interface: AbstractBeliefs, AbstractIndividual
 using ..Beliefs: BetaBeliefs, BetaBeliefParams, expectations, update_beliefs
 using ..ObservationRules: TallyObservations
 
