@@ -1,16 +1,17 @@
 module Facts
 
+using StaticArrays
 using Distributions: Binomial
 
 using ..Interface
 
-struct BinomialActionFacts <: AbstractFacts
+struct BinomialActionFacts{N} <: AbstractFacts
     actionProbabilities::Vector{Float64}
     actionDistributions::Vector{Binomial}
     trialsPerStep::Int
 end
 
-BinomialActionFacts(actionPrbs::Vector{Float64}, trialsPerStep::Int) = BinomialActionFacts(
+BinomialActionFacts{N}(actionPrbs, trialsPerStep) where {N} = BinomialActionFacts{N}(
     actionPrbs,
     [Binomial(trialsPerStep, actionPrb) for actionPrb in actionPrbs],
     trialsPerStep

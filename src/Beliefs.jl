@@ -1,9 +1,10 @@
 module Beliefs
 
+using StaticArrays
 using Distributions: Distribution
 using ..Interface: AbstractBeliefs
 using ..ObservationRules: TallyObservations
-struct BetaBeliefs <: AbstractBeliefs
+struct BetaBeliefs{N} <: AbstractBeliefs
     alphaValues::Vector{Float64}
     betaValues::Vector{Float64}
 end
@@ -21,10 +22,10 @@ function expectations(beliefs::BetaBeliefs)::Vector{Float64}
     return beliefs.alphaValues ./ (beliefs.alphaValues .+ beliefs.betaValues)
 end
 
-function update_beliefs(beliefs::BetaBeliefs, observations::TallyObservations)::BetaBeliefs
+function update_beliefs(beliefs::BetaBeliefs{N}, observations::TallyObservations)::BetaBeliefs{N} where {N}
     new_alpha_values = beliefs.alphaValues .+ observations.numSuccesses
     new_beta_values = beliefs.betaValues .+ observations.numTrials .- observations.numSuccesses
-    return BetaBeliefs(new_alpha_values, new_beta_values)
+    return BetaBeliefs{N}(new_alpha_values, new_beta_values)
 end
 
 export BetaBeliefs, BetaBeliefParams, expectations, update_beliefs

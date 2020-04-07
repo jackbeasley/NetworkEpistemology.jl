@@ -6,13 +6,11 @@ using ..ObservationRules: TallyObservations
 
 using LightGraphs
 
-struct MyopicIndividual{BT <: AbstractBeliefs} <: AbstractIndividual
-    beliefs:: BT
+struct BetaIndividual{N} <: AbstractIndividual
+    beliefs::BetaBeliefs{N}
 end
 
-const BetaIndividual = MyopicIndividual{BetaBeliefs}
-
-BetaIndividual(beliefParams::BetaBeliefParams) = BetaIndividual(BetaBeliefs(beliefParams))
+BetaIndividual{N}(beliefParams::BetaBeliefParams) where {N} = BetaIndividual{N}(BetaBeliefs(beliefParams))
 
 # Returns index (id) of chosen action based on internal belief distributions and decision process
 function Interface.select_fact_to_observe(indiv::BetaIndividual)::Int
@@ -20,8 +18,8 @@ function Interface.select_fact_to_observe(indiv::BetaIndividual)::Int
     return argmax(expectations(indiv.beliefs))
 end
 
-function Interface.begin_observation(indiv::BetaIndividual, num_facts::Int64) where {IT <: AbstractIndividual}
-    return TallyObservations(num_facts)
+function Interface.begin_observation(indiv::BetaIndividual{N}, num_facts::Int64) where {N}
+    return TallyObservations{N}()
 end
 
 function Interface.should_observe(indiv::BetaIndividual, g::AbstractGraph, idToObserve::Int, indivToObserve::BetaIndividual)::Bool
@@ -33,10 +31,10 @@ function Interface.pick_audience(indiv::BetaIndividual, g::AbstractGraph, id::In
     return inneighbors(g, id)
 end
 
-function Interface.update_with_observations(indiv::BetaIndividual, observations::TallyObservations)::BetaIndividual
-    return BetaIndividual(update_beliefs(indiv.beliefs, observations))
+function Interface.update_with_observations(indiv::BetaIndividual{N}, observations::TallyObservations{N})::BetaIndividual{N} where {N}
+    return BetaIndividual{N}(update_beliefs(indiv.beliefs, observations))
 end
 
-export BetaIndividual, select_fact_to_observe, expectations, begin_observation, pick_audience, should_observe, update_with_observations
+export BetaIndividual, select_fact_to_observe, begin_observation, pick_audience, should_observe, update_with_observations
 
 end

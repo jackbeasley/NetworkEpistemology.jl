@@ -1,6 +1,6 @@
 module Interface
 
-using LightGraphs
+using LightGraphs, StaticArrays
 
 abstract type AbstractFacts end
 abstract type AbstractObservation end

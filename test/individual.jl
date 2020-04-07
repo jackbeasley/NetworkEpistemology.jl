@@ -5,7 +5,7 @@ using Test, Distributions, LightGraphs, Printf
 
 @testset "Individual Unit Tests" begin
 
-    test_indiv = BetaIndividual(BetaBeliefs([1, 2, 3, 4], [4, 5, 6, 7]))
+    test_indiv = BetaIndividual{4}(BetaBeliefs{4}([1, 2, 3, 4], [4, 5, 6, 7]))
 
     true_expectations = [
         mean(Beta(alpha, beta)) for (alpha, beta) in

@@ -53,8 +53,8 @@ function test_params(graph::Function, size::Int)
     binomial_probs = [0.5, 0.499]
     return TransientDiversityModelState(
             SimpleDiGraph(graph(size)),
-            BinomialActionFacts(binomial_probs, 1000),
-            [BetaIndividual(BetaBeliefs(
+            BinomialActionFacts{2}(binomial_probs, 1000),
+            [BetaIndividual{2}(BetaBeliefs{2}(
                 [rand(Uniform(0, 4)) for _ = 1:length(binomial_probs)], 
                 [rand(Uniform(0, 4)) for _ = 1:length(binomial_probs)]
                 )) for i in 1:size]
