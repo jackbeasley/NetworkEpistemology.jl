@@ -1,7 +1,7 @@
 name = "NetworkEpistemology"
 uuid = "fcbdc98d-c58b-4fa7-a43f-45174aa607a6"
 authors = ["Jack Beasley <jack.beasley@gmail.com>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"

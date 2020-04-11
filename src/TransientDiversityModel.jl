@@ -1,12 +1,12 @@
 module TransientDiversityModel
 
-using LightGraphs
-using Distributions
+using LightGraphs, Distributions
 using ..Interface
 using ..Facts
 using ..ObservationRules
 using ..Individuals
 using ..Beliefs
+using ..TestBench
 
 export step_model, TransientDiversityModelState
 
@@ -24,7 +24,7 @@ TransientDiversityModelState(
         [BetaIndividual(BetaBeliefParams(size(actionPrbs)[1], alphaDist, betaDist)) for i in 1:nv(g)]
 )
 
-struct TransientDiversityStepStats <: AbstractStepStats
+struct TransientDiversityStepStats <: TestBench.AbstractStepStats
     agree::Bool
     incorrectNodes::Vector{Int64}
     fractionCorrect::Rational{Int16}
