@@ -8,7 +8,7 @@ using ..Individuals
 using ..Beliefs
 using ..TestBench
 
-export step_model, TransientDiversityModelState
+export step_model, TransientDiversityModelState, TransientDiversityStepStats
 
 
 const TransientDiversityModelState = ModelState{LightGraphs.SimpleDiGraph{Int64}, BinomialActionFacts{2}, BetaIndividual{2}}
